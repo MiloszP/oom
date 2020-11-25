@@ -1,3 +1,4 @@
+{{/*
 # Copyright Â© 2020, Nordix Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -51,6 +53,8 @@ spec:
         volumeMounts:
           - name: "{{ include "common.fullname" . }}-volume"
             mountPath: /opt/primekey/scripts/
+          - name: "{{ include "common.fullname" . }}-profiles-volume"
+            mountPath: /opt/primekey/custom_profiles/
         ports: {{ include "common.containerPorts" . | nindent 10 }}
         env:
         - name: INITIAL_ADMIN
@@ -85,8 +89,13 @@ spec:
         {{- if .Values.affinity }}
         affinity: {{ toYaml .Values.affinity | nindent 10 }}
         {{- end }}
+        resources: {{ include "common.resources" . | nindent 10 }}
       volumes:
       - configMap:
           name: "{{ include "common.fullname" . }}-config-script"
           defaultMode: 0755
         name: "{{ include "common.fullname" . }}-volume"
+      - configMap:
+          name: "{{ include "common.fullname" . }}-profiles"
+          defaultMode: 0755
+        name: "{{ include "common.fullname" . }}-profiles-volume"

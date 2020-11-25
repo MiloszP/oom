@@ -1,7 +1,9 @@
+{{/*
 #============LICENSE_START========================================================
 # ================================================================================
-# Copyright (c) 2018 AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2018-2020 AT&T Intellectual Property. All rights reserved.
 # Modifications Copyright © 2018 Amdocs, Bell Canada
+# Copyright (c) 2020 J. F. Lucas.  All rights reserved.
 # ================================================================================
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============LICENSE_END=========================================================
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -68,7 +71,6 @@ spec:
           - {{ include "common.namespace" . }}
           - --configmap
           - {{ .Values.multisiteConfigMapName }}
-        restartPolicy: Never
       - name: init-tls
         env:
           - name: POD_IP
@@ -116,6 +118,7 @@ spec:
               port: {{ .Values.service.internalPort }}
             initialDelaySeconds: {{ .Values.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
           {{ end }}
           readinessProbe:
             exec:
@@ -123,6 +126,7 @@ spec:
               - /scripts/readiness-check.sh
             initialDelaySeconds: {{ .Values.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.readiness.timeoutSeconds }}
           volumeMounts:
           - mountPath: /opt/onap/config.txt
             subPath: config.txt
@@ -144,6 +148,9 @@ spec:
             name: cm-persistent
           - mountPath: /opt/onap/certs
             name: tls-info
+          - mountPath: /opt/onap/cm-secrets
+            name: cm-secrets
+            readOnly: true
           securityContext:
             privileged: True
       volumes:
@@ -171,5 +178,8 @@ spec:
         {{- end }}
         - emptyDir: {}
           name: tls-info
+        - name: cm-secrets
+          secret:
+            secretName: {{ include "common.secret.getSecretNameFast" (dict "global" . "uid" "cm-pass") }}
       imagePullSecrets:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"

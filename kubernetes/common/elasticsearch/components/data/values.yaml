@@ -1,4 +1,5 @@
-# Copyright © 2020 Bitnami, AT&T, Amdocs, Bell Canada, highstreet technologies
+# Copyright (c) 2020 Bitnami, AT&T, Amdocs, Bell Canada, highstreet technologies
+# Modification Copyright (c) 2020 Nokia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,10 +22,13 @@ global:
     backup:
       mountPath: /dockerdata-nfs/backup
     storageClass:
-repositoryOverride: docker.io
+
 #################################################################
 # Application configuration defaults.
 #################################################################
+
+cluster_name: onap
+
 ## Init containers parameters:
 sysctlImage:
   enabled: true
@@ -46,7 +50,7 @@ service:
   - name: http-transport
     port: 9300
 
-image: bitnami/elasticsearch:6.8.6-debian-9-r23
+image: bitnami/elasticsearch:7.9.3
 ## Specify a imagePullPolicy
 ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
 ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images

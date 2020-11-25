@@ -16,11 +16,11 @@
 #################################################################
 # Global configuration defaults.
 #################################################################
-global:
-  loggingRepository: docker.elastic.co
-  loggingImage: beats/filebeat:5.5.0
 
 # application configuration
 config:
   logstashServiceName: log-ls
   logstashPort: 5044
+
+esr-gui:
+  enabled: true

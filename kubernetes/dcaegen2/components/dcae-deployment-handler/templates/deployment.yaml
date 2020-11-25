@@ -1,6 +1,7 @@
+{{/*
 #============LICENSE_START========================================================
 # ================================================================================
-# Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2019-2020 AT&T Intellectual Property. All rights reserved.
 # Modifications Copyright © 2020 Nokia
 # ================================================================================
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============LICENSE_END=========================================================
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -124,7 +126,7 @@ spec:
             - name: CLOUDIFY_USER
               value: admin
             - name: CLOUDIFY_PASSWORD
-              value: admin
+              {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "cm-pass" "key" "password") | indent 14 }}
             - name: CONFIG_BINDING_SERVICE
               value: config-binding-service
             - name: NODE_EXTRA_CA_CERTS

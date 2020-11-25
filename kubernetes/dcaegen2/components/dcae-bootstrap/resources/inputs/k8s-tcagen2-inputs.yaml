@@ -1,3 +1,4 @@
+{{/*
 #============LICENSE_START========================================================
 #=================================================================================
 # Copyright (c) 2020 AT&T Intellectual Property. All rights reserved.
@@ -14,9 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============LICENSE_END=========================================================
+*/}}
 
 {{ if .Values.componentImages.tcagen2 }}
 tag_version: {{ include "common.repository" . }}/{{ .Values.componentImages.tcagen2 }}
 {{ end }}
 tca_handle_in_subscribe_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.VES_MEASUREMENT_OUTPUT/"
-tca_handle_out_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.TCAGEN2_OUTPUT/"
+tca_handle_out_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.DCAE_CL_OUTPUT/"

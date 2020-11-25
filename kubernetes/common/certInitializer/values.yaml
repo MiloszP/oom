@@ -51,7 +51,14 @@ cadi_latitude: "38.0"
 cadi_longitude: "-72.0"
 aaf_add_config: ""
 mountPath: "/opt/app/osaaf"
+appMountPath: "/opt/app/osaaf"
 importCustomCertsEnabled: false
 truststoreMountpath: ""
 truststoreOutputFileName: truststore.jks
 truststorePassword: changeit
+
+# This introduces implicit dependency on cert-wrapper
+# if you are using cert initializer cert-wrapper has to be also deployed.
+# We had to move this CM to a separate chart to reduce the total size of our charts
+# as it exceeds the default helm limits.
+certsCMName: '{{ include "common.release" . }}-cert-wrapper-certs'

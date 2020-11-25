@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 # Modifications Copyright © 2018 AT&T
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -38,7 +40,7 @@ spec:
       imagePullSecrets:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"
       containers:
-      - image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+      - image: {{ include "repositoryGenerator.dockerHubRepository" . }}/{{ .Values.image }}
         command:
         - /bin/sh
         - "-c"
@@ -59,6 +61,7 @@ spec:
           name: consul-agent-scripts-config
         - mountPath: /consul/certs
           name: consul-agent-certs-config
+        resources: {{ include "common.resources" . | nindent 10 }}
       volumes:
       - configMap:
           name: {{ include "common.fullname" . }}-configmap

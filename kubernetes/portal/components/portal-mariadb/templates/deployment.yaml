@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 # Modifications Copyright © 2018 AT&T
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -36,14 +38,14 @@ spec:
     spec:
       initContainers:
       - name: volume-permissions
-        image: "{{ .Values.global.busyboxRepository }}/{{ .Values.global.busyboxImage }}"
+        image: {{ include "repositoryGenerator.image.busybox" . }}
         command: ['sh', '-c', 'chmod -R 777 /var/lib/mysql']
         volumeMounts:
         - mountPath: /var/lib/mysql
           name: mariadb-data
       containers:
         - name: {{ include "common.name" . }}
-          image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+          image: {{ include "repositoryGenerator.repository" . }}/{{ .Values.image }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           ports:
           - containerPort: {{ .Values.service.internalPort }}
@@ -69,6 +71,18 @@ spec:
                 secretKeyRef:
                   name: {{ template "common.fullname" . }}
                   key: db-root-password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "common.fullname" . }}
+                  key: backend-db-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "common.fullname" . }}
+                  key: backend-db-password
+            - name: PORTAL_DB_TABLES
+              value: {{ .Values.config.backend_portal_tables }}
           volumeMounts:
           - mountPath: /var/lib/mysql
             name: mariadb-data

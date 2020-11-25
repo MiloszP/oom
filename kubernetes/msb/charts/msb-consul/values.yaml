@@ -21,7 +21,7 @@ global:
 # Application configuration defaults.
 #################################################################
 # application image
-dockerHubRepository: registry.hub.docker.com
+dockerHubRepository: docker.io
 image: library/consul:1.4.3
 pullPolicy: Always
 istioSidecar: true
@@ -83,3 +83,8 @@ resources:
       cpu: 20m
       memory: 100Mi
   unlimited: {}
+
+securityContext:
+  fsGroup: 1000
+  runAsUser: 100
+  runAsGroup: 1000

@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2020 highstreet technologies GmbH
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,8 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
-nclude "common.repository" . }}apiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata: {{- include "common.resourceMetadata" . | nindent 2 }}
 spec:
@@ -74,6 +76,17 @@ spec:
             value: {{ .Values.config.sslCertiticate }}
           - name: SSL_CERTIFICATE_KEY
             value: {{ .Values.config.sslCertKey }}
+          {{ if .Values.config.transportpce.enabled }}
+          - name: TRPCEURL
+            value: {{ .Values.config.transportpce.transportpceUrl }}
+          {{ end }}
+          {{ if .Values.config.topologyserver.enabled }}
+          - name: TOPOURL
+            value: {{ .Values.config.topologyserver.topologyserverUrl }}
+          - name: TILEURL
+            value: {{ .Values.config.topologyserver.tileserverUrl }}
+          {{ end }}
+
           volumeMounts:  {{ include "common.certInitializer.volumeMount" . | nindent 10 }}
           - mountPath: /etc/localtime
             name: localtime

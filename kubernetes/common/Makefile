@@ -20,9 +20,15 @@ SECRET_DIR := $(OUTPUT_DIR)/secrets
 COMMON_CHARTS_DIR := common
 
 EXCLUDES :=
-HELM_CHARTS := $(filter-out $(EXCLUDES), $(sort $(patsubst %/.,%,$(wildcard */.))))
+PROCESSED_LAST := cert-wrapper repository-wrapper
+PROCESSED_FIRST := repositoryGenerator certInitializer
+TO_FILTER := $(PROCESSED_FIRST) $(EXCLUDES) $(PROCESSED_LAST)
 
-.PHONY: $(EXCLUDES) $(HELM_CHARTS)
+HELM_BIN := helm
+HELM_CHARTS := $(PROCESSED_FIRST) $(filter-out $(TO_FILTER), $(sort $(patsubst %/.,%,$(wildcard */.)))) $(PROCESSED_LAST)
+HELM_VER := $(shell $(HELM_BIN) version --template "{{.Version}}")
+
+.PHONY: $(HELM_CHARTS) $(TO_FILTER)
 
 all: $(COMMON_CHARTS_DIR) $(HELM_CHARTS)
 
@@ -34,15 +40,19 @@ make-%:
 	@if [ -f $*/Makefile ]; then make -C $*; fi
 
 dep-%: make-%
-	@if [ -f $*/requirements.yaml ]; then helm dep up $*; fi
+	@if [ -f $*/requirements.yaml ]; then $(HELM_BIN) dep up $*; fi
 
 lint-%: dep-%
-	@if [ -f $*/Chart.yaml ]; then helm lint $*; fi
+	@if [ -f $*/Chart.yaml ]; then $(HELM_BIN) lint $*; fi
 
 package-%: lint-%
 	@mkdir -p $(PACKAGE_DIR)
-	@if [ -f $*/Chart.yaml ]; then helm package -d $(PACKAGE_DIR) $*; fi
-	@helm repo index $(PACKAGE_DIR)
+ifeq "$(findstring v3,$(HELM_VER))" "v3"
+	@if [ -f $*/Chart.yaml ]; then PACKAGE_NAME=$$($(HELM_BIN) package -d $(PACKAGE_DIR) $* | cut -d":" -f2) && $(HELM_BIN) push -f $$PACKAGE_NAME local; fi
+else
+	@if [ -f $*/Chart.yaml ]; then $(HELM_BIN) package -d $(PACKAGE_DIR) $*; fi
+endif
+	@$(HELM_BIN) repo index $(PACKAGE_DIR)
 
 clean:
 	@rm -f */requirements.lock

@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 # Modifications Copyright © 2018 AT&T
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: StatefulSet
@@ -39,7 +41,7 @@ spec:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"
       containers:
       - name: {{ include "common.name" . }}
-        image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+        image: {{ include "repositoryGenerator.dockerHubRepository" . }}/{{ .Values.image }}
         command: ["/usr/local/bin/docker-entrypoint.sh"]
         args:
         - "agent"
@@ -68,3 +70,4 @@ spec:
             port: {{ .Values.service.internalPort }}
           initialDelaySeconds: {{ .Values.readiness.initialDelaySeconds }}
           periodSeconds: {{ .Values.readiness.periodSeconds }}
+        resources: {{ include "common.resources" . | nindent 10 }}

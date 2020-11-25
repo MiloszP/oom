@@ -20,20 +20,44 @@ global:
   env:
     tomcatDir: "/usr/local/tomcat"
   nodePortPrefix: 302
-  readinessImage: onap/oom/readiness:3.0.1
-  loggingRepository: docker.elastic.co
-  loggingImage: beats/filebeat:5.5.0
   #AAF service
   aafEnabled: true
+
+################################################################
+# Secrets metaconfig
+#################################################################
+
+secrets:
+  - uid: portal-cass
+    type: basicAuth
+    externalSecret: '{{ tpl (default "" .Values.cassandra.config.cassandraExternalSecret) . }}'
+    login: '{{ .Values.cassandra.config.cassandraUsername }}'
+    password: '{{ .Values.cassandra.config.cassandraPassword }}'
+    passwordPolicy: required
+  - uid: cipher-enc-key
+    type: password
+    externalSecret: '{{ .Values.config.cipherEncKeyExternalSecret}}'
+    password: '{{ .Values.config.cipherEncKey }}'
+    passwordPolicy: required
+  - uid: portal-backend-db
+    type: basicAuth
+    externalSecret: '{{ tpl (default "" .Values.mariadb.config.backendDbExternalSecret) . }}'
+    login: '{{ .Values.mariadb.config.backendUserName }}'
+    password: '{{ .Values.mariadb.config.backendPassword }}'
+    passwordPolicy: required
 
 #################################################################
 # Application configuration defaults.
 #################################################################
 
 # application image
-repository: nexus3.onap.org:10001
-image: onap/portal-app:3.2.3
+image: onap/portal-app:3.4.2
 pullPolicy: Always
+
+# application configuration
+config:
+  # cipherEncKeyExternalSecret: some secret
+  cipherEncKey: AGLDdG4D04BKm2IxIWEr8o==!
 
 #AAF local config
 
@@ -97,6 +121,10 @@ service:
 mariadb:
   service:
     name: portal-db
+  config:
+    # backendDbExternalSecret: some secret
+    backendUserName: portal
+    backendPassword: portal
 widget:
   service:
     name: portal-widget
@@ -104,6 +132,7 @@ cassandra:
   service:
     name: portal-cassandra
   config:
+    # cassandraExternalSecret: some secret
     cassandraUsername: root
     cassandraPassword: Aa123456
 messageRouter:

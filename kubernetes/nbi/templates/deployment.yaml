@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2018 Orange
 # Modifications Copyright © 2018  Amdocs, Bell Canada
 # Modifications Copyright © 2020 Nokia
@@ -13,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -41,7 +43,7 @@ spec:
 {{- end }}
       containers:
         - name: {{ include "common.name" . }}
-          image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+          image: {{ include "repositoryGenerator.repository" . }}/{{ .Values.image }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.internalPort }}
@@ -49,7 +51,7 @@ spec:
           # so K8s doesn't restart unresponsive container
           {{- if .Values.global.aafEnabled }}
           command:
-          - bash
+          - sh
           args:
           - -c
           - |
@@ -98,6 +100,10 @@ spec:
               value: {{ .Values.config.openStackVNFTenantId | quote }}
             - name: ONAP_CLOUDOWNER
               value: {{ .Values.config.cloudOwner }}
+            - name: ONAP_K8SCLOUDREGIONID
+              value: {{ .Values.config.k8sCloudRegionId }}
+            - name: ONAP_K8SCLOUDOWNER
+              value: {{ .Values.config.k8sCloudOwner }}
             - name: NBI_URL
               value: "https://nbi.{{ include "common.namespace" . }}:8443/nbi/api/v4"
             - name: SDC_HOST
@@ -140,31 +146,9 @@ spec:
         affinity:
 {{ toYaml .Values.affinity | indent 10 }}
         {{- end }}
-      # side car containers
-        # - name: filebeat-onap
-        #   image: "{{ .Values.global.loggingRepository }}/{{ .Values.global.loggingImage }}"
-        #   imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
-        #   volumeMounts:
-        #   - mountPath: /usr/share/filebeat/filebeat.yml
-        #     name: filebeat-conf
-        #     subPath: filebeat.yml
-        #   - mountPath: /home/esr/works/logs
-        #     name: esr-server-logs
-        #   - mountPath: /usr/share/filebeat/data
-        #     name: esr-server-filebeat
       volumes: {{ include "common.certInitializer.volumes" . | nindent 8 }}
         - name: localtime
           hostPath:
             path: /etc/localtime
-        # - name: filebeat-conf
-        #   configMap:
-        #     name: {{ include "common.fullname" . }}-esr-filebeat
-        # - name: esr-server-logs
-        #   emptyDir: {}
-        # - name: esr-server-filebeat
-        #   emptyDir: {}
-        # - name: esrserver-log
-        #   configMap:
-        #     name: {{ include "common.fullname" . }}-esr-esrserver-log
       imagePullSecrets:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"

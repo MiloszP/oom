@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 # Modifications Copyright © 2018 AT&T,VMware
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: v1
 kind: ConfigMap
@@ -24,4 +26,4 @@ metadata:
     release: {{ include "common.release" . }}
     heritage: {{ .Release.Service }}
 data:
-{{ tpl (.Files.Glob "resources/config/*").AsConfig . | indent 2 }}
+{{ tpl (.Files.Glob "resources/config/conf/*").AsConfig . | indent 2 }}

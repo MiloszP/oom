@@ -1,3 +1,4 @@
+{{/*
 #  ============LICENSE_START=======================================================
 #   Copyright (C) 2020 AT&T Intellectual Property.
 #  ================================================================================
@@ -15,6 +16,7 @@
 #
 #  SPDX-License-Identifier: Apache-2.0
 #  ============LICENSE_END=========================================================
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -56,7 +58,7 @@ spec:
         - sh
         args:
         - -c
-        - "export SQL_PASSWORD_BASE64=`echo -n ${SQL_PASSWORD} | base64`; cd /config-input && for PFILE in `ls -1 .`; do envsubst <${PFILE} >/config/${PFILE}; done"
+        - "cd /config-input && for PFILE in `ls -1`; do envsubst <${PFILE} >/config/${PFILE}; done"
         env:
         - name: RESTSERVER_USER
           {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "restserver-creds" "key" "login") | indent 10 }}
@@ -119,8 +121,6 @@ spec:
             readOnly: true
           - mountPath: /opt/app/policy/pdpx/etc/mounted
             name: pdpxconfig-processed
-            emptyDir:
-              medium: Memory
           resources:
 {{ include "common.resources" . }}
         {{- if .Values.nodeSelector }}

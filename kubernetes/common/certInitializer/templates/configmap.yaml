@@ -21,12 +21,5 @@ kind: ConfigMap
 metadata: {{- include "common.resourceMetadata" (dict "suffix" $suffix "dot" . )| nindent 2 }}
 data:
   aaf-add-config.sh: |
-    {{ tpl .Values.aaf_add_config . | indent 4 }}
+    {{ tpl .Values.aaf_add_config . | indent 4 | trim }}
 {{- end }}
----
-apiVersion: v1
-kind: ConfigMap
-{{- $suffix := "certs" }}
-metadata: {{- include "common.resourceMetadata" (dict "suffix" $suffix "dot" . ) | nindent 2 }}
-data:
-{{ tpl (.Files.Glob "resources/*").AsConfig . | indent 2 }}

@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2020 Bitnami, AT&T, Amdocs, Bell Canada, highstreet technologies
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 {{- if .Values.enabled }}
 {{- range $kind, $enabled := .Values.hooks }}
 {{- if $enabled }}
@@ -45,7 +47,7 @@ spec:
 {{- end }}
       containers:
         - name: {{ template "common.fullname" . }}-curator
-          image: {{printf "%s/%s" (include "common.repository" .)  .Values.image }}
+          image: {{printf "%s/%s" (include "repositoryGenerator.repository" .)  .Values.image }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           volumeMounts:
             - name: config-volume

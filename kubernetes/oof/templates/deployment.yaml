@@ -1,5 +1,7 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 # Modifications Copyright © 2018 AT&T,VMware
+# Modifications Copyright (C) 2020 Wipro Limited.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -46,7 +49,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: "{{ include "common.repository" . }}/{{ .Values.global.readinessImage }}"
+        image: {{ include "repositoryGenerator.image.readiness" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         name: {{ include "common.name" . }}-readiness
       - command:
@@ -64,14 +67,22 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: "{{ .Values.global.dockerHubRepository }}/{{ .Values.global.curlImage }}"
+        image: {{ include "repositoryGenerator.image.curl" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         name: {{ include "common.name" . }}-osdf-sms-readiness
-
+{{ include "common.certInitializer.initContainer" . | indent 6 }}
       containers:
         - name: {{ include "common.name" . }}
-          image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+          image: {{ include "repositoryGenerator.repository" . }}/{{ .Values.image }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
+          command:
+          - /bin/sh
+          args:
+          - "-c"
+          - |
+            grep -v '^$'  /opt/osdf/osaaf/local/org.onap.oof.crt > /tmp/oof.crt
+            cat /tmp/oof.crt /opt/app/ssl_cert/intermediate_root_ca.pem /opt/app/ssl_cert/aaf_root_ca.cer >> /opt/osdf/org.onap.oof.crt
+            ./osdfapp.sh -x osdfapp.py
           ports:
           - containerPort: {{ .Values.service.internalPort }}
           # disable liveness probe when breakpoints set in debugger
@@ -90,6 +101,7 @@ spec:
             periodSeconds: {{ .Values.readiness.periodSeconds }}
           env:
           volumeMounts:
+{{ include "common.certInitializer.volumeMount" . | indent 10 }}
           - mountPath: /etc/localtime
             name: localtime
             readOnly: true
@@ -97,17 +109,17 @@ spec:
             name: {{ include "common.fullname" . }}-config
             subPath: osdf_config.yaml
           - mountPath: /opt/app/ssl_cert/aaf_root_ca.cer
-            name: {{ include "common.fullname" . }}-config
+            name: {{ include "common.fullname" . }}-onap-certs
             subPath: aaf_root_ca.cer
-          - mountPath: /opt/app/ssl_cert/org.onap.oof.crt
-            name: {{ include "common.fullname" . }}-config
-            subPath: org.onap.oof.crt
-          - mountPath: /opt/app/ssl_cert/org.onap.oof.key
-            name: {{ include "common.fullname" . }}-config
-            subPath: org.onap.oof.key
+          - mountPath: /opt/app/ssl_cert/intermediate_root_ca.pem
+            name: {{ include "common.fullname" . }}-onap-certs
+            subPath: intermediate_root_ca.pem
           - mountPath: /opt/osdf/config/common_config.yaml
             name: {{ include "common.fullname" . }}-config
             subPath: common_config.yaml
+          - mountPath: /opt/osdf/config/log.yml
+            name: {{ include "common.fullname" . }}-config
+            subPath: log.yml
           resources:
 {{ include "common.resources" . | indent 12 }}
         {{- if .Values.nodeSelector }}
@@ -120,6 +132,7 @@ spec:
         {{- end }}
 
       volumes:
+       {{ include "common.certInitializer.volumes" . | nindent 8 }}
         - name: localtime
           hostPath:
             path: /etc/localtime
@@ -129,13 +142,10 @@ spec:
             items:
             - key: osdf_config.yaml
               path: osdf_config.yaml
-            - key: aaf_root_ca.cer
-              path: aaf_root_ca.cer
             - key: common_config.yaml
               path: common_config.yaml
-            - key: org.onap.oof.crt
-              path: org.onap.oof.crt
-            - key: org.onap.oof.key
-              path: org.onap.oof.key
+            - key: log.yml
+              path: log.yml
+{{ include "oof.certificate.volume" . | indent 8 }}
       imagePullSecrets:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"

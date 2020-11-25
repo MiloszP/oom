@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2019 Orange
 # Copyright © 2020 Samsung Electronics
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 {{ include "mariadbInit._updateSecrets" . -}}
 
@@ -47,15 +49,18 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: "{{ include "common.repository" . }}/{{ .Values.global.readinessImage }}"
+        image: {{ include "repositoryGenerator.image.readiness" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
       containers:
       - name: {{ include "common.name" . }}
-        image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+        image: {{ include "repositoryGenerator.image.mariadb" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         command:
-        - bash
-        - /db_init/db_init.sh
+          - /bin/sh
+          - -c
+          - |
+            /db_init/db_init.sh {{ if or .Values.dbScriptConfigMap .Values.dbScript }} &&
+            /db_config/db_cmd.sh{{ end }}
         env:
         - name: DB_HOST
           value: "{{ default .Values.global.mariadbGalera.nameOverride .Values.mariadbGalera.serviceName }}"
@@ -80,7 +85,10 @@ spec:
           readOnly: true
         - name: mariadb-conf
           mountPath: /db_init/
-          readOnly: true
+{{- if or .Values.dbScriptConfigMap .Values.dbScript }}
+        - name: mariadb-init
+          mountPath: /db_config/
+{{- end }}
         resources:
 {{ include "common.resources" . | indent 12 }}
       {{- if .Values.nodeSelector }}
@@ -92,12 +100,23 @@ spec:
 {{ toYaml .Values.affinity | indent 10 }}
       {{- end }}
       volumes:
-      - name: mariadb-conf
-        configMap:
-          name: {{ include "mariadbInit.configMap" . }}
       - name: localtime
         hostPath:
           path: /etc/localtime
+{{- if  or .Values.dbScriptConfigMap .Values.dbScript }}
+      - name: mariadb-init
+        configMap:
+{{-   if  .Values.dbScriptConfigMap }}
+          name: {{ tpl .Values.dbScriptConfigMap . }}
+{{-   else -}}
+          name: {{ include "common.fullname" . }}-dbscript
+{{-   end }}
+          defaultMode: 0755
+{{- end }}
+      - name: mariadb-conf
+        configMap:
+          name: {{ include "mariadbInit.configMap" . }}
+          defaultMode: 0755
       restartPolicy: Never
       imagePullSecrets:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"

@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.global.dmaapDrProvName }}
+  name: {{ default "dmaap-dr-prov" .Values.global.dmaapDrProvName }}
   namespace: {{ include "common.namespace" . }}
   labels:
     app: {{ include "common.name" . }}

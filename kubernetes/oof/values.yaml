@@ -17,16 +17,25 @@
 #################################################################
 global:
   nodePortPrefix: 302
-  readinessImage: onap/oom/readiness:3.0.1
-  loggingRepository: docker.elastic.co
-  loggingImage: beats/filebeat:5.5.0
   persistence: {}
+
+#################################################################
+# Secrets metaconfig
+#################################################################
+secrets:
+  - uid: oof-onap-certs
+    name: &oof-certs '{{ include "common.release" . }}-oof-onap-certs'
+    externalSecret: '{{ tpl (default "" .Values.certSecret) . }}'
+    type: generic
+    filePaths:
+      - resources/config/certs/intermediate_root_ca.pem
+      - resources/config/certs/aaf_root_ca.cer
+
 #################################################################
 # Application configuration defaults.
 #################################################################
 # application image
-repository: nexus3.onap.org:10001
-image: onap/optf-osdf:2.0.4
+image: onap/optf-osdf:3.0.2
 pullPolicy: Always
 
 # flag to enable debugging - application support required
@@ -78,12 +87,42 @@ config:
   configDbUrl: http://config.db.url:8080
   configDbGetCellListUrl: 'SDNCConfigDBAPI/getCellList'
   configDbGetNbrListUrl: 'SDNCConfigDBAPI/getNbrList'
+  #aai api
+  aaiUrl: https://aai:8443
+  aaiGetLinksUrl: /aai/v16/network/logical-links
+  aaiServiceInstanceUrl : /aai/v20/nodes/service-instances/service-instance/
+  aaiGetControllersUrl: /aai/v19/external-system/esr-thirdparty-sdnc-list
+  controllerQueryUrl: /aai/v19/query?format=resource
+  aaiGetInterDomainLinksUrl: /aai/v19/network/logical-links?link-type=inter-domain&operational-status=up
+  #des api
+  desUrl: https://des.url:9000
+  desApiPath: /datalake/v1/exposure/
+  desUsername: ''
+  desPassword: ''
 # default number of instances
 replicaCount: 1
 nodeSelector: {}
 affinity: {}
 # Resource Limit flavor -By Default using small
 flavor: small
+
+#sub-charts configuration
+certInitializer:
+  nameOverride: oof-osdf-cert-initializer
+  fqdn: "oof.onap"
+  app_ns: "org.osaaf.aaf"
+  fqi: "oof@oof.onap.org"
+  fqi_namespace: org.onap.oof
+  public_fqdn: "oof.onap.org"
+  aafDeployFqi: "deployer@people.osaaf.org"
+  aafDeployPass: demo123456!
+  cadi_latitude: "0.0"
+  cadi_longitude: "0.0"
+  credsPath: /opt/app/osaaf/local
+  appMountPath: /opt/osdf/osaaf
+  aaf_add_config: >
+    chmod 444 {{ .Values.credsPath }}/{{ .Values.fqi_namespace }}.key;
+
 # Segregation for Different environment (Small and Large)
 resources:
   small:
@@ -125,3 +164,11 @@ ingress:
       port: 8698
   config:
     ssl: "redirect"
+
+#component overrides
+
+oof-cmso:
+  enabled: true
+oof-has:
+  enabled: true
+  certSecret: *oof-certs

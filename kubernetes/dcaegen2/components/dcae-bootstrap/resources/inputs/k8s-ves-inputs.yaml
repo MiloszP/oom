@@ -1,3 +1,4 @@
+{{/*
 #============LICENSE_START========================================================
 #=================================================================================
 # Copyright (c) 2017-2020 AT&T Intellectual Property. All rights reserved.
@@ -16,6 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============LICENSE_END=========================================================
+*/}}
 
 {{ if .Values.componentImages.ves }}
 tag_version: {{ include "common.repository" . }}/{{ .Values.componentImages.ves }}
@@ -23,11 +25,16 @@ tag_version: {{ include "common.repository" . }}/{{ .Values.componentImages.ves 
 external_port_tls: 0
 external_port: {{ .Values.config.address.ves.port }}
 auth_method: "noAuth"
-component_name: "dcae-ves-collector-http"
-dns_component_name: "dcae-ves-collector-http"
+service_component_type: "dcae-http-ves-collector"
+service_id: "dcae-http-ves-collector-http"
+service_component_name_override: "dcae-http-ves-collector"
 ves_other_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_OTHER_OUTPUT/"
 ves_heartbeat_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_HEARTBEAT_OUTPUT/"
 ves_fault_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_FAULT_OUTPUT/"
 ves_measurement_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.VES_MEASUREMENT_OUTPUT/"
 ves_pnfRegistration_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.VES_PNFREG_OUTPUT/"
 ves_notification_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.VES_NOTIFICATION_OUTPUT/"
+ves_3gpp_fault_supervision_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_3GPP_FAULTSUPERVISION_OUTPUT/"
+ves_3gpp_provisioning_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_3GPP_PROVISIONING_OUTPUT/"
+ves_3gpp_hearbeat_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_3GPP_HEARTBEAT_OUTPUT/"
+ves_3gpp_performance_assurance_publish_url: "http://{{ .Values.config.address.message_router }}:3904/events/unauthenticated.SEC_3GPP_PERFORMANCEASSURANCE_OUTPUT/"

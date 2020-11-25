@@ -1,4 +1,6 @@
 # Copyright © 2019 Amdocs, Bell Canada
+# Copyright (c) 2020 Nordix Foundation, Modifications
+# Modifications Copyright © 2020 Nokia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,34 +40,73 @@ global:
   addTestingComponents: &testing false
 
   # ONAP Repository
-  # Uncomment the following to enable the use of a single docker
-  # repository but ONLY if your repository mirrors all ONAP
-  # docker images. This includes all images from dockerhub and
-  # any other repository that hosts images for ONAP components.
-  #repository: nexus3.onap.org:10001
+  # Four different repositories are used
+  # You can change individually these repositories to ones that will serve the
+  # right images. If credentials are needed for one of them, see below.
+  repository: nexus3.onap.org:10001
+  dockerHubRepository: &dockerHubRepository docker.io
+  elasticRepository: &elasticRepository docker.elastic.co
+  googleK8sRepository: k8s.gcr.io
+ 
+
+  #/!\ DEPRECATED /!\
+  # Legacy repositories which will be removed at the end of migration.
+  # Please don't use
+  loggingRepository: *elasticRepository
+  busyboxRepository: *dockerHubRepository
+
+  # Default credentials
+  # they're optional. If the target repository doesn't need them, comment them
   repositoryCred:
     user: docker
     password: docker
-  dockerHubRepository: docker.io
+  # If you want / need authentication on the repositories, please set
+  # Don't set them if the target repo is the same than others
+  # so id you've set repository to value `my.private.repo` and same for
+  # dockerHubRepository, you'll have to configure only repository (exclusive) OR
+  # dockerHubCred.
+  # dockerHubCred:
+  #   user: myuser
+  #   password: mypassord
+  # elasticCred:
+  #   user: myuser
+  #   password: mypassord
+  # googleK8sCred:
+  #   user: myuser
+  #   password: mypassord
 
-  # readiness check
-  readinessImage: onap/oom/readiness:3.0.1
+
+  # common global images
+  # Busybox for simple shell manipulation
+  busyboxImage: busybox:1.32
 
   # curl image
   curlImage: curlimages/curl:7.69.1
 
-  # logging agent - temporary repo until images migrated to nexus3
-  loggingRepository: docker.elastic.co
+  # env substitution image
+  envsubstImage: dibi/envsubst:1
 
-  # dockerHub main repository
-  dockerHubRepository: docker.io
+  # generate htpasswd files image
+  # there's only latest image for htpasswd
+  htpasswdImage: xmartlabs/htpasswd:latest
 
-  # busybox repo and image
-  busyboxRepository: docker.io
-  busyboxImage: busybox:1.30
+  # kubenretes client image
+  kubectlImage: bitnami/kubectl:1.19
 
-  # kubeclt image
-  kubectlImage: "bitnami/kubectl:1.15"
+  # logging agent
+  loggingImage: beats/filebeat:5.5.0
+
+  # mariadb client image
+  mariadbImage: mariadb:10.1.48
+
+  # nginx server image
+  nginxImage: bitnami/nginx:1.18-debian-10
+
+  # postgreSQL client and server image
+  postgresImage: crunchydata/crunchy-postgres:centos7-10.11-4.2.1
+
+  # readiness check image
+  readinessImage: onap/oom/readiness:3.0.1
 
   # image pull policy
   pullPolicy: Always
@@ -104,8 +145,8 @@ global:
   ingress:
     enabled: false
     virtualhost:
-        enabled: true
-        baseurl: "simpledemo.onap.org"
+      enabled: true
+      baseurl: "simpledemo.onap.org"
 
   # Global Service Mesh configuration
   # POC Mode, don't use it in production
@@ -121,12 +162,12 @@ global:
 
   # Enabling CMPv2
   cmpv2Enabled: true
-  aaf:
+  platform:
     certServiceClient:
-      image: onap/org.onap.aaf.certservice.aaf-certservice-client:1.2.0
+      image: onap/org.onap.oom.platform.cert-service.oom-certservice-client:2.1.0
       secret:
-        name: aaf-cert-service-client-tls-secret
-        mountPath: /etc/onap/aaf/certservice/certs/
+        name: oom-cert-service-client-tls-secret
+        mountPath: /etc/onap/oom/certservice/certs/
       envVariables:
         # Certificate related
         cmpv2Organization: "Linux-Foundation"
@@ -136,12 +177,18 @@ global:
         cmpv2Country: "US"
         # Client configuration related
         caName: "RA"
-        requestURL: "https://aaf-cert-service:8443/v1/certificate/"
+        requestURL: "https://oom-cert-service:8443/v1/certificate/"
         requestTimeout: "30000"
-        keystorePath: "/etc/onap/aaf/certservice/certs/certServiceClient-keystore.jks"
+        keystorePath: "/etc/onap/oom/certservice/certs/certServiceClient-keystore.jks"
+        outputType: "P12"
         keystorePassword: "secret"
-        truststorePath: "/etc/onap/aaf/certservice/certs/truststore.jks"
+        truststorePath: "/etc/onap/oom/certservice/certs/truststore.jks"
         truststorePassword: "secret"
+
+  # Indicates offline deployment build
+  # Set to true if you are rendering helm charts for offline deployment
+  # Otherwise keep it disabled
+  offlineDeploymentBuild: false
 
   # TLS
   # Set to false if you want to disable TLS for NodePorts. Be aware that this
@@ -154,13 +201,12 @@ global:
   # default
   centralizedLoggingEnabled: &centralizedLogging false
 
-
-# Example of specific for the components where you want to disable TLS only for
-# it:
-# if set this element will force or not tls even if global.serviceMesh.tls and
-# global.tlsEnabled is set otherwise.
-# robot:
-#   tlsOverride: false
+  # Example of specific for the components where you want to disable TLS only for
+  # it:
+  # if set this element will force or not tls even if global.serviceMesh.tls and
+  # global.tlsEnabled is set otherwise.
+  # robot:
+  #   tlsOverride: false
 
   # Global storage configuration
   #    Set to "-" for default, or with the name of the storage class
@@ -224,8 +270,6 @@ contrib:
 dcaegen2:
   enabled: false
 dcaemod:
-  enabled: false
-pnda:
   enabled: false
 dmaap:
   enabled: false
@@ -293,6 +337,12 @@ so:
     openStackServiceTenantName: "service"
     openStackEncryptedPasswordHere: "c124921a3a0efbe579782cde8227681e"
 
+  # in order to enable static password for so-monitoring uncomment:
+  # so-monitoring:
+  #   server:
+  #     monitoring:
+  #       password: demo123456!
+
   # configure embedded mariadb
   mariadb:
     config:
@@ -307,3 +357,12 @@ vnfsdk:
   enabled: false
 modeling:
   enabled: false
+platform:
+  enabled: false
+a1policymanagement:
+  enabled: false
+
+cert-wrapper:
+  enabled: true
+repository-wrapper:
+  enabled: true

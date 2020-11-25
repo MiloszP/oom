@@ -38,23 +38,12 @@ global:
     backup:
       mountPath: /dockerdata-nfs/backup
 
-  repository: nexus3.onap.org:10001
-
-  readinessImage: onap/oom/readiness:3.0.1
-  busyboxImage: busybox:1.30
-  busyboxRepository: docker.io
-  # kubeclt image
-  kubectlImage: "bitnami/kubectl:1.15"
-
 #################################################################
 # Application configuration defaults.
 #################################################################
 
 #repository: mysql
-repository: nexus3.onap.org:10001
 image: adfinissygroup/k8s-mariadb-galera-centos:v002
-backupImage: library/mariadb:10.1.38
-imageInit: busybox
 pullPolicy: IfNotPresent
 
 # application configuration
@@ -131,10 +120,10 @@ ingress:
 ## Configure MariaDB-Galera with a custom my.cnf file
 ## ref: https://mariadb.com/kb/en/mariadb/configuring-mariadb-with-mycnf/#example-of-configuration-file
 ##
-externalConfig: ""
-# externalConfig: |-
-  # [mysqld]
-  # innodb_buffer_pool_size=2G
+#externalConfig: ""
+externalConfig: |-
+   [mysqld]
+   lower_case_table_names = 1
 
 #resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -150,11 +139,11 @@ externalConfig: ""
 resources:
   small:
     limits:
-      cpu: 2
-      memory: 4Gi
+      cpu: 500m
+      memory: 1.5Gi
     requests:
-      cpu: 1
-      memory: 2Gi
+      cpu: 100m
+      memory: 750Mi
   large:
     limits:
       cpu: 2

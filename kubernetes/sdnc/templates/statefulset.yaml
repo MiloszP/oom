@@ -1,5 +1,5 @@
 {{/*
-# Copyright © 2020 Samsung Electronics, highstreet technologies GmbH
+# Copyright © 2020 Samsung Electronics
 # Copyright © 2017 Amdocs, Bell Canada
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,11 @@ spec:
           {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "db-secret" "key" "login") | indent 10 }}
         - name: SDNC_DB_PASSWORD
           {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "db-secret" "key" "password") | indent 10 }}
+        - name: ODL_ADMIN_USERNAME
+          {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "odl-creds" "key" "login") | indent 10 }}
+        - name: ODL_ADMIN_PASSWORD
+          {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "odl-creds" "key" "password") | indent 10 }}
+
         volumeMounts:
         - mountPath: /config-input
           name: config-input
@@ -94,6 +99,48 @@ spec:
         {{ end -}}
 {{ include "common.certInitializer.initContainer" . | indent 6 }}
 
+      {{ if .Values.global.cmpv2Enabled }}
+      - name: certs-init
+        image: "{{ .Values.global.repository }}/{{ .Values.global.platform.certServiceClient.image }}"
+        imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
+        env:
+          - name: REQUEST_URL
+            value: {{ .Values.global.platform.certServiceClient.envVariables.requestURL }}
+          - name: REQUEST_TIMEOUT
+            value: "30000"
+          - name: OUTPUT_PATH
+            value: {{ .Values.global.platform.certServiceClient.envVariables.cert_path }}
+          - name: CA_NAME
+            value: {{ .Values.global.platform.certServiceClient.envVariables.caName }}
+          - name: COMMON_NAME
+            value: {{ .Values.global.platform.certServiceClient.envVariables.common_name }}
+          - name: ORGANIZATION
+            value: {{ .Values.global.platform.certServiceClient.envVariables.cmpv2Organization }}
+          - name: ORGANIZATION_UNIT
+            value: {{ .Values.global.platform.certServiceClient.envVariables.cmpv2OrganizationalUnit }}
+          - name: LOCATION
+            value: {{ .Values.global.platform.certServiceClient.envVariables.cmpv2Location }}
+          - name: STATE
+            value: {{ .Values.global.platform.certServiceClient.envVariables.cmpv2State }}
+          - name: COUNTRY
+            value: {{ .Values.global.platform.certServiceClient.envVariables.cmpv2Country }}
+          - name: KEYSTORE_PATH
+            value: {{ .Values.global.platform.certServiceClient.envVariables.keystorePath }}
+          - name: KEYSTORE_PASSWORD
+            value: {{ .Values.global.platform.certServiceClient.envVariables.keystorePassword }}
+          - name: TRUSTSTORE_PATH
+            value: {{ .Values.global.platform.certServiceClient.envVariables.truststorePath }}
+          - name: TRUSTSTORE_PASSWORD
+            value: {{ .Values.global.platform.certServiceClient.envVariables.truststorePassword }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+          - mountPath: {{ .Values.global.platform.certServiceClient.envVariables.cert_path }}
+            name: certs
+          - mountPath: {{ .Values.global.platform.certServiceClient.secret.mountPath }}
+            name: certservice-tls-volume
+      {{ end }}
+
       - name: {{ include "common.name" . }}-chown
         image: {{ .Values.global.busyboxRepository | default .Values.busyboxRepository }}/{{ .Values.global.busyboxImage | default .Values.busyboxImage }}
         command:
@@ -112,13 +159,8 @@ spec:
         - name: {{ include "common.name" . }}
           image: "{{ include "common.repository" . }}/{{ .Values.image }}"
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
-          {{- if not .Values.config.sdnr.enabled }}
           command: ["/bin/bash"]
           args: ["-c", "/opt/onap/sdnc/bin/startODL.sh"]
-          {{ else }}
-          command: ["/bin/bash"]
-          args: ["-c", "{{ .Values.config.binDir }}/startODL.oom.sh"]
-          {{ end }}
           ports:
           - containerPort: {{ .Values.service.internalPort }}
           - containerPort: {{ .Values.service.internalPort2 }}
@@ -160,6 +202,8 @@ spec:
             value: {{ include "common.mariadbService" . }}
           - name: JAVA_HOME
             value: "{{ .Values.config.javaHome}}"
+          - name: JAVA_OPTS
+            value: "-Xms{{.Values.config.odl.javaOptions.minMemory}} -Xmx{{.Values.config.odl.javaOptions.maxMemory}}"
           - name: KARAF_CONSOLE_LOG_LEVEL
             value: "{{ include "common.log.level" . }}"
           - name: SDNRWT
@@ -186,9 +230,6 @@ spec:
           - mountPath: /opt/opendaylight/current/etc/org.ops4j.pax.logging.cfg
             name: sdnc-logging-cfg-config
             subPath: org.ops4j.pax.logging.cfg
-          - mountPath: {{ .Values.config.binDir }}/startODL.sh
-            name: bin
-            subPath: startODL.sh
           - mountPath: {{ .Values.config.binDir }}/installSdncDb.sh
             name: bin
             subPath: installSdncDb.sh
@@ -235,6 +276,10 @@ spec:
           - mountPath: {{ .Values.config.odl.etcDir }}/mountpoint-state-provider.properties
             name: properties
             subPath: mountpoint-state-provider.properties
+          {{ if .Values.global.cmpv2Enabled }}
+          - mountPath: {{ .Values.global.platform.certServiceClient.envVariables.cert_path }}
+            name: certs
+          {{- end }}
           resources:
 {{ include "common.resources" . | indent 12 }}
         {{- if .Values.nodeSelector }}
@@ -285,6 +330,14 @@ spec:
         - name: properties
           emptyDir:
             medium: Memory
+        {{ if .Values.global.cmpv2Enabled }}
+        - name: certs
+          emptyDir:
+            medium: Memory
+        - name: certservice-tls-volume
+          secret:
+            secretName: {{ .Values.global.platform.certServiceClient.secret.name }}
+        {{- end }}
   {{ if not .Values.persistence.enabled }}
         - name: {{ include "common.fullname" . }}-data
           emptyDir: {}

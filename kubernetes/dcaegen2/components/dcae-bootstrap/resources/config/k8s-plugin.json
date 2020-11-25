@@ -1,3 +1,4 @@
+{{/*
 #============LICENSE_START========================================================
 #=================================================================================
 # Copyright (c) 2018-2020 AT&T Intellectual Property. All rights reserved.
@@ -16,6 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============LICENSE_END=========================================================
+*/}}
 
 {
   "namespace" : "{{ if .Values.dcae_ns }}{{ .Values.dcae_ns}}{{ else }}{{include "common.namespace" . }}{{ end}}",
@@ -41,15 +43,20 @@
     },
   "external_cert":
     {
-      "image_tag": "{{ .Values.global.tlsRepository }}/{{ .Values.cmpv2Config.global.aaf.certServiceClient.image }}",
-      "request_url": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.requestURL }}",
-      "timeout":  "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.requestTimeout }}",
-      "country": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.cmpv2Country }}",
-      "organization": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.cmpv2Organization }}",
-      "state": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.cmpv2State }}",
-      "organizational_unit": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.cmpv2OrganizationalUnit }}",
-      "location": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.cmpv2Location }}",
-      "keystore_password": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.keystorePassword }}",
-      "truststore_password": "{{ .Values.cmpv2Config.global.aaf.certServiceClient.envVariables.truststorePassword }}"
+      "image_tag": "{{ .Values.global.tlsRepository }}/{{ .Values.cmpv2Config.global.platform.certServiceClient.image }}",
+      "request_url": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.requestURL }}",
+      "timeout":  "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.requestTimeout }}",
+      "country": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.cmpv2Country }}",
+      "organization": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.cmpv2Organization }}",
+      "state": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.cmpv2State }}",
+      "organizational_unit": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.cmpv2OrganizationalUnit }}",
+      "location": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.cmpv2Location }}",
+      "cert_secret_name": "{{ .Values.cmpv2Config.global.platform.certServiceClient.secretName }}",
+      "keystore_password": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.keystorePassword }}",
+      "truststore_password": "{{ .Values.cmpv2Config.global.platform.certServiceClient.envVariables.truststorePassword }}"
+    },
+  "truststore_merger":
+    {
+      "image_tag": "{{ .Values.global.tlsRepository }}/{{ .Values.cmpv2Config.global.platform.certPostProcessor.image }}"
     }
 }

@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2018 Amdocs, Bell Canada
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -46,8 +48,15 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: "{{ include "common.repository" . }}/{{ .Values.global.readinessImage }}"
+        image: {{ include "repositoryGenerator.image.readiness" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
       {{- if .Values.global.aafEnabled }}
       - name: {{ include "common.fullname" . }}-move-cert
         command:
@@ -58,15 +67,22 @@ spec:
             cp {{ .Values.certInitializer.credsPath }}/{{ .Values.certInitializer.keystoreFile }} /sdc-certs/{{ .Values.certInitializer.keystoreFile }}
             cp {{ .Values.certInitializer.credsPath }}/{{ .Values.certInitializer.truststoreFile }} /sdc-certs/{{ .Values.certInitializer.truststoreFile }}
             cp {{ .Values.certInitializer.credsPath }}/mycreds.prop /sdc-certs/mycreds.prop
-        image: "{{ .Values.global.busyboxRepository }}/{{ .Values.global.busyboxImage }}"
+        image: {{ include "repositoryGenerator.image.busybox" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         volumeMounts: {{ include "common.certInitializer.volumeMount" . | nindent 10 }}
           - name: sdc-certs
             mountPath: /sdc-certs
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
       {{- end }}
       containers:
         - name: {{ include "common.name" . }}
-          image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+          image: {{ include "repositoryGenerator.repository" . }}/{{ .Values.image }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           {{- if .Values.global.aafEnabled }}
           command:
@@ -114,8 +130,8 @@ spec:
             readOnly: true
           {{- if .Values.global.aafEnabled }}
           - name: sdc-certs
-            mountPath: /sdc-certs
-            subpath: mycreds.prop
+            mountPath: /sdc-certs/mycreds.prop
+            subPath: mycreds.prop
           - name: sdc-certs
             mountPath: /var/lib/jetty/etc/{{ .Values.certInitializer.keystoreFile }}
             subPath: {{ .Values.certInitializer.keystoreFile }}
@@ -123,8 +139,7 @@ spec:
             mountPath: /var/lib/jetty/etc/{{ .Values.certInitializer.truststoreFile }}
             subPath: {{ .Values.certInitializer.truststoreFile }}
           {{ end }}
-          resources:
-{{ include "common.resources" . | indent 12 }}
+          resources: {{ include "common.resources" . | nindent 12 }}
         {{- if .Values.nodeSelector }}
         nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 10 }}
@@ -135,7 +150,7 @@ spec:
         {{- end }}
         # side car containers
         - name: {{ include "common.name" . }}-filebeat-onap
-          image: "{{ .Values.global.loggingRepository }}/{{ .Values.global.loggingImage }}"
+          image: {{ include "repositoryGenerator.image.logging" . }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           volumeMounts:
           - name: {{ include "common.fullname" . }}-filebeat-conf
@@ -145,6 +160,13 @@ spec:
             mountPath: /var/log/onap
           - name: {{ include "common.fullname" . }}-data-filebeat
             mountPath: /usr/share/filebeat/data
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 3m
+              memory: 20Mi
       volumes: {{ include "common.certInitializer.volumes" . | nindent 8 }}
         - name: {{ include "common.fullname" . }}-localtime
           hostPath:

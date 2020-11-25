@@ -1,4 +1,5 @@
-# Copyright © 2020 Bitnami, AT&T, Amdocs, Bell Canada, highstreet technologies
+# Copyright (c) 2020 Bitnami, AT&T, Amdocs, Bell Canada, highstreet technologies
+# Modification Copyright (c) 2020 Nokia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,11 +19,6 @@
 global:
   aafEnabled: true
   nodePortPrefix: 302
-  readinessImage: onap/oom/readiness:3.0.1
-  loggingRepository: docker.elastic.co
-  loggingImage: beats/filebeat:5.5.0
-  busyboxRepository: registry.hub.docker.com
-  busyboxImage: library/busybox:latest
   clusterName: cluster.local
 
 persistence:
@@ -30,7 +26,6 @@ persistence:
   backup:
     mountPath: /dockerdata-nfs/backup
   storageClass:
-repositoryOverride: docker.io
 
 #################################################################
 # Application configuration defaults.
@@ -40,7 +35,7 @@ sysctlImage:
   enabled: true
 
 # application image
-image: bitnami/elasticsearch:6.8.6-debian-9-r23
+image: bitnami/elasticsearch:7.9.3
 ## Specify a imagePullPolicy
 ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
 ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -133,13 +128,8 @@ serviceAccount:
   ##
   # name:
 
-## Bitnami Minideb image version
-## ref: https://hub.docker.com/r/bitnami/minideb/tags/
-##
 sysctlImage:
   enabled: true
-  imageName: bitnami/minideb
-  tag: stretch
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -154,8 +144,6 @@ sysctlImage:
 
 # nginx image
 nginx:
-  imageName: bitnami/nginx
-  tag: 1.16-debian-9
   pullPolicy: IfNotPresent
   service:
     name: nginx
@@ -317,7 +305,9 @@ master:
   # dedicatednode: "no"
   # handles master and data node functionality
   dedicatednode: "no"
+  cluster_name: elasticsearch
 data:
   enabled: false
+  cluster_name: elasticsearch
 curator:
   enabled: false

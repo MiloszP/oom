@@ -19,9 +19,15 @@ ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 OUTPUT_DIR := $(ROOT_DIR)/dist
 PACKAGE_DIR := $(OUTPUT_DIR)/packages
 SECRET_DIR := $(OUTPUT_DIR)/secrets
+HELM_BIN := helm
+HELM_VER := $(shell $(HELM_BIN) version --template "{{.Version}}")
+# use this if you would like to push onap charts to repo with other name
+# WARNING: Helm v3+ only
+# WARNING: Make sure to edit also requirements files
+HELM_REPO := local
 
 ifneq ($(SKIP_LINT),TRUE)
-	HELM_LINT_CMD := helm lint
+	HELM_LINT_CMD := $(HELM_BIN) lint
 else
 	HELM_LINT_CMD := echo "Skipping linting of"
 endif
@@ -30,9 +36,9 @@ SUBMODS := robot aai
 EXCLUDES := config oneclick readiness test dist helm $(PARENT_CHART) dcae $(SUBMODS)
 HELM_CHARTS := $(filter-out $(EXCLUDES), $(sort $(patsubst %/.,%,$(wildcard */.)))) $(PARENT_CHART)
 
-.PHONY: $(EXCLUDES) $(HELM_CHARTS)
+.PHONY: $(EXCLUDES) $(HELM_CHARTS) check-for-staging-images
 
-all: $(COMMON_CHARTS_DIR) $(SUBMODS) $(HELM_CHARTS) plugins
+all: $(COMMON_CHARTS_DIR) $(SUBMODS) $(HELM_CHARTS) helm-repo-update plugins
 
 $(COMMON_CHARTS):
 	@echo "\n[$@]"
@@ -58,15 +64,19 @@ make-%:
 	@if [ -f $*/Makefile ]; then make -C $*; fi
 
 dep-%: make-%
-	@if [ -f $*/requirements.yaml ]; then helm dep up $*; fi
+	@if [ -f $*/requirements.yaml ]; then $(HELM_BIN) dep up $*; fi
 
 lint-%: dep-%
 	@if [ -f $*/Chart.yaml ]; then $(HELM_LINT_CMD) $*; fi
 
 package-%: lint-%
 	@mkdir -p $(PACKAGE_DIR)
-	@if [ -f $*/Chart.yaml ]; then helm package -d $(PACKAGE_DIR) $*; fi
-	@helm repo index $(PACKAGE_DIR)
+ifeq "$(findstring v3,$(HELM_VER))" "v3"
+	@if [ -f $*/Chart.yaml ]; then PACKAGE_NAME=$$($(HELM_BIN) package -d $(PACKAGE_DIR) $* | cut -d":" -f2) && $(HELM_BIN) push -f $$PACKAGE_NAME $(HELM_REPO); fi
+else
+	@if [ -f $*/Chart.yaml ]; then $(HELM_BIN) package -d $(PACKAGE_DIR) $*; fi
+	@$(HELM_BIN) repo index $(PACKAGE_DIR)
+endif
 
 clean:
 	@rm -f */requirements.lock
@@ -75,19 +85,30 @@ clean:
 
 # publish helm plugins via distrubtion directory
 plugins:
-	@cp -R helm $(PACKAGE_DIR)/
+	@cp -R $(HELM_BIN) $(PACKAGE_DIR)/
 
 # start up a local helm repo to serve up helm chart packages
+# WARNING: Only helm < v3 supported
 repo:
 	@mkdir -p $(PACKAGE_DIR)
-	@helm serve --repo-path $(PACKAGE_DIR) &
+	@$(HELM_BIN) serve --repo-path $(PACKAGE_DIR) &
 	@sleep 3
-	@helm repo index $(PACKAGE_DIR)
-	@helm repo add local http://127.0.0.1:8879
+	@$(HELM_BIN) repo index $(PACKAGE_DIR)
+	@$(HELM_BIN) repo add local http://127.0.0.1:8879
 
 # stop local helm repo
+# WARNING: Only helm < v3 supported
 repo-stop:
-	@pkill helm
-	@helm repo remove local
+	@pkill $(HELM_BIN)
+	@$(HELM_BIN) repo remove local
+
+check-for-staging-images:
+	$(ROOT_DIR)/contrib/tools/check-for-staging-images.sh
+
+helm-repo-update:
+ifeq "$(findstring v3,$(HELM_VER))" "v3"
+	@$(HELM_BIN) repo update
+endif
+
 %:
 	@:

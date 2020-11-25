@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, AT&T, Bell Canada
 # Modifications Copyright © 2018  ZTE
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -36,7 +38,7 @@ spec:
     spec:
       initContainers: {{ include "common.certInitializer.initContainer" . | nindent 6 }}
       - name: {{ include "common.name" . }}-job-completion
-        image: "{{ include "common.repository" . }}/{{ .Values.global.readinessImage }}"
+        image: {{ include "repositoryGenerator.image.readiness" . }}
         imagePullPolicy: "{{ .Values.global.pullPolicy | default .Values.pullPolicy }}"
         command:
         - /app/ready.py
@@ -49,9 +51,16 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
       {{- if .Values.global.aafEnabled }}
       - name: {{ include "common.name" . }}-update-config
-        image: "{{ .Values.global.envsubstImage }}"
+        image: {{ include "repositoryGenerator.image.envsubst" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         command:
         - sh
@@ -75,10 +84,38 @@ spec:
             mountPath: /config-input/
           - name: sdc-environments-output
             mountPath: /config-output/
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
       {{- end }}
+      - name: volume-permissions
+        image: {{ .Values.global.busyboxRepository | default .Values.busyboxRepository }}/{{ .Values.global.busyboxImage | default .Values.busyboxImage }}
+        imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
+        command:
+          - sh
+        args:
+          - "-c"
+          - |
+            chown -R {{ .Values.securityContext.runAsUser }}:{{ .Values.securityContext.fsGroup }} //onboard/cert
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - name: {{ include "common.fullname" . }}-cert-storage
+            mountPath: "/onboard/cert"
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 3m
+            memory: 20Mi
       containers:
         - name: {{ include "common.name" . }}
-          image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+          image: {{ include "repositoryGenerator.repository" . }}/{{ .Values.image }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           ports:
           - containerPort: {{ .Values.service.internalPort }}
@@ -99,8 +136,7 @@ spec:
             initialDelaySeconds: {{ .Values.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.readiness.periodSeconds }}
             timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
-          resources:
-{{ include "common.resources" . | indent 12 }}
+          resources: {{ include "common.resources" . | nindent 12 }}
           env:
           - name: ENVNAME
             value: {{ .Values.env.name }}
@@ -136,6 +172,8 @@ spec:
             readOnly: true
           - name: {{ include "common.fullname" . }}-logs
             mountPath: /var/log/onap
+          - name: {{ include "common.fullname" . }}-cert-storage
+            mountPath: "{{ .Values.cert.certDir }}"
           - name: {{ include "common.fullname" . }}-logback
             mountPath: /tmp/logback.xml
             subPath: logback.xml
@@ -145,7 +183,7 @@ spec:
                 command: ["/bin/sh", "-c", "export LOG=wait_logback.log; touch $LOG; export SRC=/tmp/logback.xml; export DST=/var/lib/jetty/config/onboarding-be/; while [ ! -e $DST ]; do echo 'Waiting for $DST...' >> $LOG; sleep 5; done; sleep 2; /bin/cp -f $SRC $DST; echo 'Done' >> $LOG"]
         # side car containers
         - name: {{ include "common.name" . }}-filebeat-onap
-          image: "{{ .Values.global.loggingRepository }}/{{ .Values.global.loggingImage }}"
+          image: {{ include "repositoryGenerator.image.logging" . }}
           imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
           volumeMounts:
           - name: {{ include "common.fullname" . }}-filebeat-conf
@@ -155,6 +193,13 @@ spec:
             mountPath: /var/log/onap
           - name: {{ include "common.fullname" . }}-data-filebeat
             mountPath: /usr/share/filebeat/data
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 3m
+              memory: 20Mi
       volumes: {{ include "common.certInitializer.volumes" . | nindent 6 }}
       - name: {{ include "common.fullname" . }}-localtime
         hostPath:
@@ -175,5 +220,8 @@ spec:
         emptyDir: { medium: "Memory" }
       - name:  {{ include "common.fullname" . }}-logs
         emptyDir: {}
+      - name:  {{ include "common.fullname" . }}-cert-storage
+        persistentVolumeClaim:
+          claimName: {{ include "common.fullname" . }}-cert
       imagePullSecrets:
       - name: "{{ include "common.namespace" . }}-docker-registry-key"

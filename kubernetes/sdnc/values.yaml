@@ -35,6 +35,31 @@ global:
     service: mariadb-galera
     internalPort: 3306
     nameOverride: mariadb-galera
+  # Enabling CMPv2
+  cmpv2Enabled: true
+  platform:
+    certServiceClient:
+      image: onap/org.onap.oom.platform.cert-service.oom-certservice-client:2.1.0
+      secret:
+        name: oom-cert-service-client-tls-secret
+        mountPath: /etc/onap/oom/certservice/certs/
+      envVariables:
+        # Certificate related
+        cert_path: /var/custom-certs
+        cmpv2Organization: "Linux-Foundation"
+        cmpv2OrganizationalUnit: "ONAP"
+        cmpv2Location: "San-Francisco"
+        cmpv2Country: "US"
+        # Client configuration related
+        caName: "RA"
+        common_name: "sdnc.simpledemo.onap.org"
+        requestURL: "https://oom-cert-service:8443/v1/certificate/"
+        requestTimeout: "30000"
+        keystorePath: "/etc/onap/oom/certservice/certs/certServiceClient-keystore.jks"
+        outputType: "P12"
+        keystorePassword: "secret"
+        truststorePath: "/etc/onap/oom/certservice/certs/truststore.jks"
+        truststorePassword: "secret"
 
 #################################################################
 # Secrets metaconfig
@@ -108,9 +133,10 @@ secrets:
 # Application configuration defaults.
 #################################################################
 # application images
+
 repository: nexus3.onap.org:10001
 pullPolicy: Always
-image: onap/sdnc-image:1.8.4
+image: onap/sdnc-image:2.0.4
 busyboxRepository: docker.io
 busyboxImage: busybox:1.30
 
@@ -160,11 +186,12 @@ config:
   logstashPort: 5044
   ansibleServiceName: sdnc-ansible-server
   ansiblePort: 8000
-  javaHome: /usr/lib/jvm/java-1.8-openjdk
+  javaHome: /opt/java/openjdk
 
   odl:
     etcDir: /opt/opendaylight/etc
     binDir: /opt/opendaylight/bin
+    gcLogDir: /opt/opendaylight/data/log
     salConfigDir: /opt/opendaylight/system/org/opendaylight/controller/sal-clustering-config
     salConfigVersion: 1.9.1
     akka:
@@ -184,10 +211,15 @@ config:
     javaOptions:
       maxGCPauseMillis: 100
       parallelGCThreads : 3
-      numberGGLogFiles: 10
+      numberGCLogFiles: 10
+      minMemory: 512m
+      maxMemory: 2048m
+      gcLogOptions: ""
+      # Next line enables gc logging
+      # gcLogOptions: "-Xlog:gc=trace:file={{.Values.config.odl.gcLogDir}}/gc-%t.log}:time,level,tags:filecount={{.Values.config.odl.javaOptions.numberGCLogFiles}}"
         # enables sdnr functionality
   sdnr:
-    enabled: false
+    enabled: true
     # mode: web - SDNC contains device manager only plus dedicated webserver service for ODLUX (default),
     # mode: dm - SDNC contains sdnr device manager + ODLUX components
     mode: dm
@@ -283,6 +315,8 @@ sdnc-ansible-server:
 dgbuilder:
   enabled: true
   nameOverride: sdnc-dgbuilder
+  certInitializer:
+    nameOverride: sdnc-dgbuilder-cert-initializer
   config:
     db:
       dbName: *sdncDbName
@@ -314,14 +348,14 @@ dgbuilder:
 # local elasticsearch cluster
 localElasticCluster: true
 elasticsearch:
-  nameOverride: sdnrdb
+  nameOverride: &elasticSearchName sdnrdb
   name: sdnrdb-cluster
   certInitializer:
     fqdn: "sdnc"
     fqi_namespace: org.onap.sdnc
     fqi: "sdnc@sdnc.onap.org"
   service:
-    name: sdnrdb
+    name: *elasticSearchName
   master:
     replicaCount: 3
     # dedicatednode: "yes"
@@ -329,10 +363,11 @@ elasticsearch:
     # dedicatednode: "no"
     # handles master and data node functionality
     dedicatednode: "no"
-    nameOverride: sdnrdb
+    nameOverride: *elasticSearchName
+    cluster_name: *elasticSearchName
 # enable
 sdnc-web:
-  enabled: false
+  enabled: true
 # default number of instances
 replicaCount: 1
 
@@ -403,6 +438,22 @@ persistence:
   mountPath: /dockerdata-nfs
   mountSubPath: sdnc/mdsal
   mdsalPath: /opt/opendaylight/current/daexim
+
+certpersistence:
+  enabled: true
+
+  ## A manually managed Persistent Volume and Claim
+  ## Requires persistence.enabled: true
+  ## If defined, PVC must be created manually before volume will be bound
+  # existingClaim:
+
+  volumeReclaimPolicy: Retain
+  accessMode: ReadWriteOnce
+  size: 50Mi
+  mountPath: /dockerdata-nfs
+  mountSubPath: sdnc/certs
+  certPath: /opt/app/osaaf
+  ##storageClass: "manual"
 
 ingress:
   enabled: false

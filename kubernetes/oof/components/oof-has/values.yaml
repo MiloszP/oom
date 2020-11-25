@@ -1,0 +1,91 @@
+# Copyright © 2017 Amdocs, AT&T, Bell Canada, VMware
+# Modifications Copyright © 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#################################################################
+# Global configuration defaults.
+#################################################################
+global:
+  commonConfigPrefix: onap-oof-has
+  image:
+    optf_has: onap/optf-has:2.1.2
+  persistence:
+    enabled: true
+
+#################################################################
+# Secrets metaconfig
+#################################################################
+secrets:
+  - uid: oof-onap-certs
+    name: &oof-certs  '{{ include "common.release" . }}-oof-onap-certs'
+    externalSecret: '{{ tpl (default "" .Values.certSecret) . }}'
+    type: generic
+    filePaths: '{{ .Values.secretsFilePaths }}'
+
+pullPolicy: Always
+nodePortPrefix: 302
+dataRootDir: /dockerdata-nfs
+config:
+  aaf:
+    serviceName: aaf-service
+    port: 8100
+  aai:
+    serviceName: aai
+    port: 8443
+  msb:
+    serviceName: msb-iag
+    port: 80
+  music:
+    serviceName: music
+    port: 8443
+  sms:
+    serviceName: aaf-sms
+    port: 10443
+# Resource Limit flavor -By Default using small
+flavor: small
+# Segregation for Different environment (Small and Large)
+resources:
+  small:
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+    requests:
+      memory: 1Gi
+      cpu: 500m
+  large:
+    limits:
+      memory: 4Gi
+      cpu: 2000m
+    requests:
+      memory: 2Gi
+      cpu: 1000m
+  unlimited: {}
+
+#component overrides
+oof-has-api:
+  enabled: true
+  certSecret: *oof-certs
+oof-has-controller:
+  enabled: true
+  certSecret: *oof-certs
+oof-has-data:
+  enabled: true
+  certSecret: *oof-certs
+oof-has-reservation:
+  enabled: true
+  certSecret: *oof-certs
+oof-has-solver:
+  enabled: true
+  certSecret: *oof-certs
+

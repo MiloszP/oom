@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 global:
-  aaf:
+  platform:
     certServiceClient:
-      image: onap/org.onap.aaf.certservice.aaf-certservice-client:1.2.0
+      image: onap/org.onap.oom.platform.cert-service.oom-certservice-client:2.1.0
+      secretName: oom-cert-service-client-tls-secret
       envVariables:
         # Certificate related
         cmpv2Organization: "Linux-Foundation"
@@ -23,7 +24,10 @@ global:
         cmpv2State: "California"
         cmpv2Country: "US"
         # Client configuration related
-        requestURL: "https://aaf-cert-service:8443/v1/certificate/"
+        requestURL: "https://oom-cert-service:8443/v1/certificate/"
         requestTimeout: "30000"
         keystorePassword: "secret"
         truststorePassword: "secret"
+    certPostProcessor:
+      image: onap/org.onap.oom.platform.cert-service.oom-certservice-post-processor:2.1.0
+

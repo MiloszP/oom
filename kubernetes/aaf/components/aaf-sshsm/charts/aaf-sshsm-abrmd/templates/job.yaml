@@ -48,17 +48,16 @@ spec:
         - name: {{ include "common.fullname" . }}-tpmconfig
           mountPath: "/abrmd/cred/"
           readOnly: true
-        resources: {{ toYaml .Values.resources | nindent 10 }}
+        resources: {{ include "common.resources" . | nindent 10 }}
       {{- if .Values.nodeSelector }}
       nodeSelector: {{ toYaml .Values.nodeSelector | nindent 8 }}
-        {{- end -}}
         {{- if .Values.global.tpm.enabled }}
         {{ (printf "%s: \"%s\"" .Values.global.tpm.nodeLabel .Values.global.tpm.nodeLabelValue) }}
         {{- end -}}
+      {{- end -}}
         {{- if .Values.affinity }}
       affinity: {{ toYaml .Values.affinity | nindent 8 }}
         {{- end }}
-      resources: {{ include "common.resources" . | nindent 10 }}
       volumes:
       - name: {{ include "common.fullname" . }}-data
         persistentVolumeClaim:

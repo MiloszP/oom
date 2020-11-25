@@ -1,3 +1,4 @@
+{{/*
 # Copyright © 2017 Amdocs, Bell Canada
 # Modifications Copyright © 2018,2020 AT&T
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -36,7 +38,7 @@ spec:
     spec:
       initContainers:
       - name: {{ include "common.name" . }}-readiness
-        image: "{{ include "common.repository" . }}/{{ .Values.global.readinessImage }}"
+        image: {{ include "repositoryGenerator.image.readiness" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         command:
         - /app/ready.py
@@ -49,10 +51,46 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+      - name: {{ include "common.name" . }}-portalsdk-config
+        image: {{ include "repositoryGenerator.image.envsubst" . }}
+        imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
+        command:
+        - sh
+        args:
+        - "-c"
+        - |
+          cd /config-input && \
+          for PFILE in `ls -1 *.xml`
+          do
+            cp ${PFILE} /config
+            chmod 0755 /config/${PFILE}
+          done
+          cd /config-input && \
+          for PFILE in `ls -1 *.properties`
+          do
+            envsubst <${PFILE} >/config/${PFILE}
+            chmod 0755 /config/${PFILE}
+          done
+        env:
+          - name: CASSA_USER
+            {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "portal-cass" "key" "login") | indent 12 }}
+          - name: CASSA_PASSWORD
+            {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "portal-cass" "key" "password") | indent 12 }}
+          - name: CIPHER_ENC_KEY
+            {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "cipher-enc-key" "key" "password") | indent 12 }}
+          - name: PORTAL_DB_USER
+            {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "portal-backend-db" "key" "login") | indent 12 }}
+          - name: PORTAL_DB_PASSWORD
+            {{- include "common.secret.envFromSecretFast" (dict "global" . "uid" "portal-backend-db" "key" "password") | indent 12 }}
+        volumeMounts:
+        - mountPath: /config-input
+          name: properties-onapportalsdk-scrubbed
+        - mountPath: /config
+          name: properties-onapportalsdk
 {{ include "common.certInitializer.initContainer" . | indent 6 }}
       containers:
       - name: {{ include "common.name" . }}
-        image: "{{ include "common.repository" . }}/{{ .Values.image }}"
+        image: {{ include "repositoryGenerator.repository" . }}/{{ .Values.image }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         command: ["bash","-c"]
         {{- if .Values.global.aafEnabled }}
@@ -100,6 +138,9 @@ spec:
           mountPath: "{{ .Values.global.env.tomcatDir }}/webapps/ONAPPORTALSDK/WEB-INF/classes/portal.properties"
           subPath: portal.properties
         - name: properties-onapportalsdk
+          mountPath: "{{ .Values.global.env.tomcatDir }}/webapps/ONAPPORTAL/WEB-INF/classes/key.properties"
+          subPath: key.properties
+        - name: properties-onapportalsdk
           mountPath: "{{ .Values.global.env.tomcatDir }}/webapps/ONAPPORTALSDK/WEB-INF/classes/music.properties"
           subPath: music.properties
         - name: properties-onapportalsdk
@@ -120,7 +161,7 @@ spec:
 {{ toYaml .Values.affinity | indent 10 }}
       {{- end }}
       - name: filebeat-onap
-        image: "{{ .Values.global.loggingRepository }}/{{ .Values.global.loggingImage }}"
+        image: {{ include "repositoryGenerator.image.logging" . }}
         imagePullPolicy: {{ .Values.global.pullPolicy | default .Values.pullPolicy }}
         volumeMounts:
         - mountPath: /usr/share/filebeat/filebeat.yml
@@ -135,6 +176,9 @@ spec:
           hostPath:
             path: /etc/localtime
         - name: properties-onapportalsdk
+          emptyDir:
+            medium: Memory
+        - name: properties-onapportalsdk-scrubbed
           configMap:
             name: {{ include "common.fullname" . }}-onapportalsdk
             defaultMode: 0755

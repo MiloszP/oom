@@ -18,9 +18,6 @@
 #################################################################
 global:
   nodePortPrefix: 302
-  readinessImage: onap/oom/readiness:3.0.1
-  loggingRepository: docker.elastic.co
-  loggingImage: beats/filebeat:5.5.0
   aafEnabled: true
   persistence: {}
   cassandra:
@@ -62,9 +59,8 @@ certInitializer:
 # Application configuration defaults.
 #################################################################
 # application image
-repository: nexus3.onap.org:10001
-image: onap/sdc-onboard-backend:1.6.7
-onboardingInitImage: onap/sdc-onboard-cassandra-init:1.6.7
+image: onap/sdc-onboard-backend:1.7.3
+onboardingInitImage: onap/sdc-onboard-cassandra-init:1.7.3
 pullPolicy: Always
 
 # flag to enable debugging - application support required
@@ -155,16 +151,16 @@ flavor: small
 resources:
   small:
     limits:
-      cpu: 1
-      memory: 4Gi
+      cpu: 500m
+      memory: 2Gi
     requests:
-      cpu: 10m
+      cpu: 40m
       memory: 1Gi
   large:
     limits:
-      cpu: 2
-      memory: 8Gi
+      cpu: 1
+      memory: 4Gi
     requests:
-      cpu: 20m
+      cpu: 80m
       memory: 2Gi
   unlimited: {}
